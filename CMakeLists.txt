@@ -35,18 +35,19 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(tarefa_adc tarefa_adc.c )
+add_executable(tarefa_adc tarefa_adc.c bibliotecas/ssd1306.c)
 
 pico_set_program_name(tarefa_adc "tarefa_adc")
 pico_set_program_version(tarefa_adc "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(tarefa_adc 0)
+pico_enable_stdio_uart(tarefa_adc 1)
 pico_enable_stdio_usb(tarefa_adc 0)
 
 # Add the standard library to the build
 target_link_libraries(tarefa_adc
-        pico_stdlib)
+        pico_stdlib
+        hardware_adc)
 
 # Add the standard include files to the build
 target_include_directories(tarefa_adc PRIVATE
@@ -55,7 +56,7 @@ target_include_directories(tarefa_adc PRIVATE
 
 # Add any user requested libraries
 target_link_libraries(tarefa_adc 
-        
+        hardware_i2c
         )
 
 pico_add_extra_outputs(tarefa_adc)
