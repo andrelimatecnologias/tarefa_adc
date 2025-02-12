@@ -20,6 +20,9 @@
 #define BUTTON_A 5
 #define BUTTON_JOYSTIC 22
 
+#define JOYSTICK_X 26
+#define JOYSTICK_Y 27
+
 ssd1306_t ssd; // Inicializa a estrutura do display
 
 void configuracao(){
@@ -42,7 +45,7 @@ void configuracao(){
     gpio_put(GPIO_LED_R,false);
     gpio_put(GPIO_LED_G,false);
     gpio_put(GPIO_LED_B,false);
-    
+
 
     i2c_init(I2C_PORT, 400 * 1000);
 
@@ -58,6 +61,10 @@ void configuracao(){
     // Limpa o display. O display inicia com todos os pixels apagados.
     ssd1306_fill(&ssd, false);
     ssd1306_send_data(&ssd);
+
+    adc_init();
+    adc_gpio_init(JOYSTICK_X);
+    adc_gpio_init(JOYSTICK_Y);
 }
 
 int main()
