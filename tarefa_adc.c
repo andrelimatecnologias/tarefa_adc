@@ -2,6 +2,7 @@
 #include "pico/stdlib.h"
 #include "hardware/adc.h"
 #include "hardware/i2c.h"
+#include "hardware/timer.h"
 #include "bibliotecas/ssd1306.h"
 #include "bibliotecas/font.h"
 #include "hardware/pwm.h"
@@ -33,18 +34,36 @@
 int16_t ajuste_fino_x = 0;
 int16_t ajuste_fino_y = 0;
 
+volatile bool LEDs_PWM_ativados = true;
+volatile bool borda_dupla=false;
+float xp=0.0,yp=0.0;
+
 ssd1306_t ssd; // Inicializa a estrutura do display
 volatile uint32_t last_time=0;
 
+void pinta_borda_display(){
+    ssd1306_rect(&ssd,3,3,WIDTH-5,HEIGHT-5,true,false);
+    if(borda_dupla){
+        ssd1306_rect(&ssd,1,1,WIDTH-3,HEIGHT-3,true,false);
+        ssd1306_rect(&ssd,0,0,WIDTH-1,HEIGHT-1,true,false);
+    }
+    ssd1306_send_data(&ssd);
+}
+
 void gpio_irq_handler(uint gpio, uint32_t events){
     uint32_t atual = to_ms_since_boot(get_absolute_time());
-    if((atual-last_time)>100){
+    if((atual-last_time)>200){
         last_time = atual;
+        if(gpio==BUTTON_A){
+            LEDs_PWM_ativados = !LEDs_PWM_ativados;
+        }
         if(gpio==BUTTON_B){
             reset_usb_boot(0, 0);
         }
         if(gpio==BUTTON_JOYSTIC){
             gpio_put(GPIO_LED_G,!gpio_get(GPIO_LED_G));
+            borda_dupla = !borda_dupla;
+            pinta_borda_display();
         }
     }
 }
@@ -65,6 +84,7 @@ void configuracao(){
     gpio_pull_up(BUTTON_B);
     gpio_pull_up(BUTTON_JOYSTIC);
 
+    gpio_set_irq_enabled_with_callback(BUTTON_A, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
     gpio_set_irq_enabled_with_callback(BUTTON_B, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
     gpio_set_irq_enabled_with_callback(BUTTON_JOYSTIC,GPIO_IRQ_EDGE_FALL,true,&gpio_irq_handler);
 
@@ -110,6 +130,18 @@ uint16_t getIntensidadeLED(int16_t medida){
     return 2048-medida;
 }
 
+void pintaQuadradoDisplay(float x, float y){
+    ssd1306_fill(&ssd,false);
+    pinta_borda_display();
+    uint8_t pixel_x = (uint8_t)(x*(float)WIDTH);
+    uint8_t pixel_y = (uint8_t)(HEIGHT-y*(float)HEIGHT);
+    if(pixel_x<0){pixel_x=0;}
+    if(pixel_x>(WIDTH-8)){pixel_x = WIDTH-8;}
+    if(pixel_y<0){pixel_y=0;}
+    if(pixel_y>(HEIGHT-8)){pixel_y=HEIGHT-8;}
+    ssd1306_rect(&ssd,pixel_y,pixel_x,8,8,true,true);
+    ssd1306_send_data(&ssd);
+}
 
 int main()
 {
@@ -119,7 +151,7 @@ int main()
     adc_select_input(1);
     ajuste_fino_x = 2048-adc_read();
     adc_select_input(0);
-    ajuste_fino_y == 2048-adc_read();
+    ajuste_fino_y = 2048-adc_read();
     pwm_set_gpio_level(GPIO_LED_R,0);
     pwm_set_gpio_level(GPIO_LED_B,0);
 
@@ -127,14 +159,14 @@ int main()
         adc_select_input(1);
         
         uint16_t leituraX = adc_read();
-        float xp = ((float)leituraX)/4095.0; 
+        xp = ((float)leituraX)/4095.0; 
         adc_select_input(0);
         uint16_t leituraY = adc_read();
-        float yp = ((float)leituraY)/4095.0;
-        printf("X = %d, y = %d\n",leituraX,leituraY);
+        yp = ((float)leituraY)/4095.0;
+        pintaQuadradoDisplay(xp,yp);
         uint16_t corrigidoX = getIntensidadeLED(leituraX+ajuste_fino_x);
         uint16_t corrigidoY = getIntensidadeLED(leituraY+ajuste_fino_y);
-        if((corrigidoX>TOLERANCIA)&&(corrigidoY>TOLERANCIA)){
+        if((corrigidoX>TOLERANCIA)&&(corrigidoY>TOLERANCIA)&&(LEDs_PWM_ativados)){
             pwm_set_gpio_level(GPIO_LED_R,corrigidoX);
             pwm_set_gpio_level(GPIO_LED_B,corrigidoY);
         }else{
