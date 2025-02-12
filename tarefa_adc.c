@@ -13,9 +13,36 @@
 
 #define INTENSIDADE 0.01
 
+#define GPIO_LED_R 13
+#define GPIO_LED_G 11
+#define GPIO_LED_B 12
+
+#define BUTTON_A 5
+#define BUTTON_JOYSTIC 22
+
 ssd1306_t ssd; // Inicializa a estrutura do display
 
 void configuracao(){
+
+    gpio_init(GPIO_LED_R);
+    gpio_init(GPIO_LED_G);
+    gpio_init(GPIO_LED_B);
+    gpio_init(BUTTON_A);
+    gpio_init(BUTTON_JOYSTIC);
+
+    gpio_set_dir(GPIO_LED_R,GPIO_OUT);
+    gpio_set_dir(GPIO_LED_G,GPIO_OUT);
+    gpio_set_dir(GPIO_LED_B,GPIO_OUT);
+    gpio_set_dir(BUTTON_A,GPIO_IN);
+    gpio_set_dir(BUTTON_JOYSTIC,GPIO_IN);
+
+    gpio_pull_up(BUTTON_A);
+    gpio_pull_up(BUTTON_JOYSTIC);
+
+    gpio_put(GPIO_LED_R,false);
+    gpio_put(GPIO_LED_G,false);
+    gpio_put(GPIO_LED_B,false);
+    
 
     i2c_init(I2C_PORT, 400 * 1000);
 
