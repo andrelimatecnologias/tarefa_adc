@@ -4,6 +4,7 @@
 #include "hardware/i2c.h"
 #include "bibliotecas/ssd1306.h"
 #include "bibliotecas/font.h"
+#include "hardware/pwm.h"
 
 
 #define I2C_PORT i2c1
@@ -23,28 +24,24 @@
 #define JOYSTICK_X 26
 #define JOYSTICK_Y 27
 
+#define PWM_WRAP 4095
+
 ssd1306_t ssd; // Inicializa a estrutura do display
 
 void configuracao(){
 
-    gpio_init(GPIO_LED_R);
     gpio_init(GPIO_LED_G);
-    gpio_init(GPIO_LED_B);
     gpio_init(BUTTON_A);
     gpio_init(BUTTON_JOYSTIC);
 
-    gpio_set_dir(GPIO_LED_R,GPIO_OUT);
     gpio_set_dir(GPIO_LED_G,GPIO_OUT);
-    gpio_set_dir(GPIO_LED_B,GPIO_OUT);
     gpio_set_dir(BUTTON_A,GPIO_IN);
     gpio_set_dir(BUTTON_JOYSTIC,GPIO_IN);
 
     gpio_pull_up(BUTTON_A);
     gpio_pull_up(BUTTON_JOYSTIC);
 
-    gpio_put(GPIO_LED_R,false);
     gpio_put(GPIO_LED_G,false);
-    gpio_put(GPIO_LED_B,false);
 
 
     i2c_init(I2C_PORT, 400 * 1000);
@@ -65,6 +62,15 @@ void configuracao(){
     adc_init();
     adc_gpio_init(JOYSTICK_X);
     adc_gpio_init(JOYSTICK_Y);
+
+    gpio_set_function(GPIO_LED_R, GPIO_FUNC_PWM);
+    gpio_set_function(GPIO_LED_B,GPIO_FUNC_PWM);
+    uint slice1 = pwm_gpio_to_slice_num(GPIO_LED_R);
+    pwm_set_wrap(slice1,PWM_WRAP);
+    pwm_set_enabled(slice1,true);
+    uint slice2 = pwm_gpio_to_slice_num(GPIO_LED_B);
+    pwm_set_wrap(slice2,PWM_WRAP);
+    pwm_set_enabled(slice2,PWM_WRAP);
 }
 
 int main()
@@ -74,6 +80,10 @@ int main()
     configuracao();
 
     while (true) {
+        adc_select_input(0);
+        uint16_t leituraX = adc_read();
+        adc_select_input(1);
+        uint16_t leituraY = adc_read();
         printf("Hello, world!\n");
         sleep_ms(1000);
     }
